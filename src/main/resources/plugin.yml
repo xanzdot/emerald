@@ -1,0 +1,14 @@
+name: EmeraldTools
+version: 2.0.0
+main: com.emeraldtools.EmeraldToolsPlugin
+api-version: '26.1'
+description: Emerald Pickaxe (3x3 mining), Emerald Axe (tree felling).
+commands:
+  emeraldtools:
+    description: Give Emerald Tools to a player.
+    usage: /emeraldtools give <pickaxe|axe|sword> [player]
+    permission: emeraldtools.give
+permissions:
+  emeraldtools.give:
+    description: Use the /emeraldtools give command.
+    default: op
