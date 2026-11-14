@@ -38,12 +38,15 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
     private static final int TREE_RADIUS_Y = 40;
 
     private NamespacedKey toolKey;
+    private NamespacedKey expiryKey;
+    private static final long PICKAXE_LIFETIME_MS = 66L * 60 * 60 * 1000;
     // Set while we break extra blocks, so our own events don't trigger again.
     private boolean expanding = false;
 
     @Override
     public void onEnable() {
         toolKey = new NamespacedKey(this, "emerald_tool");
+        expiryKey = new NamespacedKey(this, "expires_at");
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("emeraldtools").setExecutor(this);
         getCommand("nv").setExecutor(this);
@@ -57,8 +60,16 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         if (player.isSneaking()) return; // hold shift to mine just one block
 
-        String type = toolType(player.getInventory().getItemInMainHand());
+        ItemStack held = player.getInventory().getItemInMainHand();
+        String type = toolType(held);
         if (type == null) return;
+
+        if ("pickaxe".equals(type) && isExpired(held)) {
+            event.setCancelled(true);
+            player.getInventory().setItemInMainHand(null);
+            player.sendMessage("Your Emerald Pickaxe has expired.");
+            return;
+        }
 
         expanding = true;
         try {
@@ -177,6 +188,13 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         player.getInventory().setItemInMainHand(tool);
     }
 
+    private boolean isExpired(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        Long expiresAt = meta.getPersistentDataContainer().get(expiryKey, PersistentDataType.LONG);
+        return expiresAt != null && System.currentTimeMillis() > expiresAt;
+    }
+
     private String toolType(ItemStack item) {
         if (item == null || item.getType().isAir()) return null;
         ItemMeta meta = item.getItemMeta();
@@ -200,6 +218,10 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text(name, NamedTextColor.GREEN));
         meta.getPersistentDataContainer().set(toolKey, PersistentDataType.STRING, type);
+        if (type.equals("pickaxe")) {
+            meta.getPersistentDataContainer().set(expiryKey, PersistentDataType.LONG,
+                    System.currentTimeMillis() + PICKAXE_LIFETIME_MS);
+        }
         item.setItemMeta(meta);
         return item;
     }
