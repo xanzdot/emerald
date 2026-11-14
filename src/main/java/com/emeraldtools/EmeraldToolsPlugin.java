@@ -19,6 +19,8 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayDeque;
@@ -44,6 +46,7 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         toolKey = new NamespacedKey(this, "emerald_tool");
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("emeraldtools").setExecutor(this);
+        getCommand("nv").setExecutor(this);
         getLogger().info("EmeraldTools enabled.");
     }
 
@@ -203,6 +206,22 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("nv")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("Only players can use /nv.");
+                return true;
+            }
+            if (player.hasPotionEffect(PotionEffectType.NIGHT_VISION)) {
+                player.removePotionEffect(PotionEffectType.NIGHT_VISION);
+                player.sendMessage("Night vision off.");
+            } else {
+                player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION,
+                        PotionEffect.INFINITE_DURATION, 0, false, false, true));
+                player.sendMessage("Night vision on.");
+            }
+            return true;
+        }
+
         if (args.length < 2 || !args[0].equalsIgnoreCase("give")) {
             sender.sendMessage("Usage: /emeraldtools give <pickaxe|axe|sword> [player]");
             return true;

@@ -4,6 +4,9 @@ main: com.emeraldtools.EmeraldToolsPlugin
 api-version: '26.2'
 description: Emerald Pickaxe (3x3 mining), Emerald Axe (tree felling).
 commands:
+  nv:
+    description: Toggle infinite night vision.
+    usage: /nv
   emeraldtools:
     description: Give Emerald Tools to a player.
     usage: /emeraldtools give <pickaxe|axe|sword> [player]
