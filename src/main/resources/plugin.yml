@@ -9,7 +9,7 @@ commands:
     usage: /nv
   emeraldtools:
     description: Give Emerald Tools to a player.
-    usage: /emeraldtools give <pickaxe|axe|sword> [player]
+    usage: /emeraldtools give <pickaxe|axe|sword> [player] | spearenchant
     permission: emeraldtools.give
 permissions:
   emeraldtools.give:

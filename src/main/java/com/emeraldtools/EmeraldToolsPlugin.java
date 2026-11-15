@@ -5,6 +5,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -30,6 +32,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
 
@@ -188,6 +191,49 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         player.getInventory().setItemInMainHand(tool);
     }
 
+    // Gives every spear in every online player's inventory one random enchantment.
+    private void enchantSpears() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            int gained = 0;
+            ItemStack[] contents = player.getInventory().getContents();
+            for (int i = 0; i < contents.length; i++) {
+                ItemStack item = player.getInventory().getItem(i);
+                if (item == null || !item.getType().name().endsWith("_SPEAR")) continue;
+
+                Enchantment chosen = pickRandomEnchant(item);
+                if (chosen == null) continue;
+
+                int level = ThreadLocalRandom.current().nextInt(1, chosen.getMaxLevel() + 1);
+                item.addUnsafeEnchantment(chosen, level);
+                player.getInventory().setItem(i, item);
+                gained++;
+            }
+            if (gained > 0) {
+                player.sendMessage("Your spears gained " + gained + " new enchantment(s).");
+            }
+        }
+    }
+
+    private Enchantment pickRandomEnchant(ItemStack item) {
+        List<Enchantment> options = new ArrayList<>();
+        for (Enchantment enchant : Registry.ENCHANTMENT) {
+            if (enchant.isCursed()) continue;
+            if (!enchant.canEnchantItem(item)) continue;
+            if (item.containsEnchantment(enchant)) continue;
+
+            boolean conflicts = false;
+            for (Enchantment existing : item.getEnchantments().keySet()) {
+                if (enchant.conflictsWith(existing)) {
+                    conflicts = true;
+                    break;
+                }
+            }
+            if (!conflicts) options.add(enchant);
+        }
+        if (options.isEmpty()) return null;
+        return options.get(ThreadLocalRandom.current().nextInt(options.size()));
+    }
+
     private boolean isExpired(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
@@ -241,6 +287,12 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
                         PotionEffect.INFINITE_DURATION, 0, false, false, true));
                 player.sendMessage("Night vision on.");
             }
+            return true;
+        }
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("spearenchant")) {
+            enchantSpears();
+            sender.sendMessage("Spears enchanted.");
             return true;
         }
 
