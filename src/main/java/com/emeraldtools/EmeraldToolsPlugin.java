@@ -3,6 +3,8 @@ package com.emeraldtools;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -16,6 +18,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -39,6 +42,7 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
     private static final int MAX_TREE_BLOCKS = 200;
     private static final int TREE_RADIUS_XZ = 10;
     private static final int TREE_RADIUS_Y = 40;
+    private static final int FIRST_JOIN_RADIUS = 5000;
 
     private NamespacedKey toolKey;
     private NamespacedKey expiryKey;
@@ -232,6 +236,39 @@ public final class EmeraldToolsPlugin extends JavaPlugin implements Listener {
         }
         if (options.isEmpty()) return null;
         return options.get(ThreadLocalRandom.current().nextInt(options.size()));
+    }
+
+    // New players get moved to a random safe spot shortly after their first join.
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasPlayedBefore()) return;
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            Location target = findSafeLocation(player.getWorld());
+            if (target != null) {
+                player.teleportAsync(target);
+            }
+        }, 20L);
+    }
+
+    private Location findSafeLocation(World world) {
+        Location spawn = world.getSpawnLocation();
+        for (int attempt = 0; attempt < 30; attempt++) {
+            int x = spawn.getBlockX() + ThreadLocalRandom.current().nextInt(-FIRST_JOIN_RADIUS, FIRST_JOIN_RADIUS + 1);
+            int z = spawn.getBlockZ() + ThreadLocalRandom.current().nextInt(-FIRST_JOIN_RADIUS, FIRST_JOIN_RADIUS + 1);
+            int y = world.getHighestBlockYAt(x, z);
+
+            Block ground = world.getBlockAt(x, y, z);
+            if (!ground.getType().isSolid() || ground.isLiquid()) continue;
+            if (!world.getBlockAt(x, y + 1, z).getType().isAir()) continue;
+            if (!world.getBlockAt(x, y + 2, z).getType().isAir()) continue;
+
+            Location loc = new Location(world, x + 0.5, y + 1, z + 0.5);
+            if (!world.getWorldBorder().isInside(loc)) continue;
+            return loc;
+        }
+        return null;
     }
 
     private boolean isExpired(ItemStack item) {
